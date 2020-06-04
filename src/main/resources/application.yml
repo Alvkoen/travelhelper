@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    # initialize: true
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/travel_helper
+    username: travel_user
+    password: somesecurepassword
+
+    hikari:
+      connection-timeout: 60000
+      maximum-pool-size: 8
+
+  jpa:
+    show_sql: true
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            clientId: 1
+            clientSecret: 2
+            redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
+            scope:
+              - email
+              - profile
+          
+app:
+  auth:
+    tokenSecret: 12345
+    tokenExpirationMs: 864000000
+  oauth2:
+    # After successfully authenticating with the OAuth2 Provider,
+    # we'll be generating an auth token for the user and sending the token to the
+    # redirectUri mentioned by the frontend client in the /oauth2/authorize request.
+    # We're not using cookies because they won't work well in mobile clients.
+    authorizedRedirectUris:
+      - http://localhost:3000/oauth2/redirect
+      - myandroidapp://oauth2/redirect
+      - myiosapp://oauth2/redirect
