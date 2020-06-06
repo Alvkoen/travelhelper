@@ -6,9 +6,12 @@ import com.alvcohen.travelhelper.model.User;
 import com.alvcohen.travelhelper.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -16,7 +19,7 @@ import org.springframework.util.StringUtils;
 import java.util.Optional;
 
 @Service
-public class OAuth2UserService extends DefaultOAuth2UserService {
+public class OAuth2UserService extends OidcUserService {
 
     private UserRepository userRepository;
 
@@ -26,8 +29,8 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
     }
 
     @Override
-    public OAuth2User loadUser(OAuth2UserRequest oAuth2UserRequest) throws OAuth2AuthenticationException {
-        OAuth2User oAuth2User = super.loadUser(oAuth2UserRequest);
+    public OidcUser loadUser(OidcUserRequest oAuth2UserRequest) throws OAuth2AuthenticationException {
+        OidcUser oAuth2User = super.loadUser(oAuth2UserRequest);
         try {
             return processOAuthUser(oAuth2UserRequest, oAuth2User);
         } catch (Exception ex) {
@@ -35,38 +38,34 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         }
     }
 
-    private OAuth2User processOAuthUser(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
-        OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(oAuth2UserRequest.getClientRegistration().getRegistrationId(), oAuth2User.getAttributes());
-        if (StringUtils.isEmpty(oAuth2UserInfo.getEmail())) {
-            throw new OAuth2AuthenticationProcessingException("Email not found from OAuth2 provider");
-        }
-
-        Optional<User> userOptional = userRepository.findByEmail(oAuth2UserInfo.getEmail());
+    private OidcUser processOAuthUser(OidcUserRequest oAuth2UserRequest, OidcUser oAuth2User) {
+        Optional<User> userOptional = userRepository.findByEmail(oAuth2User.getEmail());
         User user;
         if (userOptional.isPresent()) {
             user = userOptional.get();
-            if (!user.getProvider().equals(AuthProvider.valueOf(oAuth2UserRequest.getClientRegistration().getRegistrationId()))) {
+            if (!user.getProvider().equals(AuthProvider.valueOf(oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase()))) {
                 throw new OAuth2AuthenticationProcessingException("Looks like you're signed up with " +
                     user.getProvider() + " account. Please use your " + user.getProvider() +
                     " account to login.");
             }
-            user = updateExistingUser(user, oAuth2UserInfo);
+            user = updateExistingUser(user, oAuth2User);
         } else {
-            user = registerNewUser(oAuth2UserRequest, oAuth2UserInfo);
+            user = registerNewUser(oAuth2UserRequest, oAuth2User);
         }
-        return UserPrincipal.create(user, oAuth2User.getAttributes());
+
+        return UserPrincipal.create(user, oAuth2User);
     }
 
-    private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) {
+    private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OidcUser oAuth2UserInfo) {
         User user = new User();
-        user.setProvider(AuthProvider.valueOf(oAuth2UserRequest.getClientRegistration().getRegistrationId()));
-        user.setProviderId(oAuth2UserInfo.getId());
+        user.setProvider(AuthProvider.GOOGLE);
+        user.setProviderId(oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase());
         user.setName(oAuth2UserInfo.getName());
         user.setEmail(oAuth2UserInfo.getEmail());
         return userRepository.save(user);
     }
 
-    private User updateExistingUser(User existingUser, OAuth2UserInfo oAuth2UserInfo) {
+    private User updateExistingUser(User existingUser, OidcUser oAuth2UserInfo) {
         existingUser.setName(oAuth2UserInfo.getName());
         return userRepository.save(existingUser);
     }

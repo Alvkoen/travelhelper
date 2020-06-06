@@ -21,13 +21,12 @@ spring:
       client:
         registration:
           google:
-            clientId: 1
-            clientSecret: 2
-            redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
-            scope:
-              - email
-              - profile
-          
+            clientId: ${google.client.id}
+            clientSecret: ${google.client.secret}
+            scope: openid,email,profile
+        provider:
+          google:
+            user-name-attribute: name
 app:
   auth:
     tokenSecret: 12345

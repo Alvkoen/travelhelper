@@ -4,6 +4,9 @@ import com.alvcohen.travelhelper.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Collection;
@@ -11,12 +14,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class UserPrincipal implements OAuth2User, UserDetails {
+public class UserPrincipal implements OidcUser, UserDetails {
     private final Long id;
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
-    private Map<String, Object> attributes;
+    private OidcUser sourceUser;
 
     public UserPrincipal(Long id, String email, String password, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
@@ -37,9 +40,10 @@ public class UserPrincipal implements OAuth2User, UserDetails {
         );
     }
 
-    public static UserPrincipal create(User user, Map<String, Object> attributes) {
+    public static UserPrincipal create(User user, OidcUser oidcUser) {
         UserPrincipal userPrincipal = UserPrincipal.create(user);
-        userPrincipal.setAttributes(attributes);
+        userPrincipal.setSourceUser(oidcUser);
+
         return userPrincipal;
     }
 
@@ -82,21 +86,36 @@ public class UserPrincipal implements OAuth2User, UserDetails {
     }
 
     @Override
+    public Map<String, Object> getAttributes() {
+        return this.sourceUser.getAttributes();
+    }
+
+    @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
 
     @Override
-    public Map<String, Object> getAttributes() {
-        return attributes;
+    public Map<String, Object> getClaims() {
+        return this.sourceUser.getAttributes();
     }
 
-    public void setAttributes(Map<String, Object> attributes) {
-        this.attributes = attributes;
+    @Override
+    public OidcUserInfo getUserInfo() {
+        return this.sourceUser.getUserInfo();
+    }
+
+    @Override
+    public OidcIdToken getIdToken() {
+        return this.sourceUser.getIdToken();
     }
 
     @Override
     public String getName() {
         return String.valueOf(id);
+    }
+
+    private void setSourceUser(OidcUser sourceUser) {
+        this.sourceUser = sourceUser;
     }
 }
