@@ -8,7 +8,6 @@ import com.alvcohen.travelhelper.dto.SignUpRequest;
 import com.alvcohen.travelhelper.model.AuthProvider;
 import com.alvcohen.travelhelper.model.User;
 import com.alvcohen.travelhelper.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,28 +28,15 @@ import java.net.URI;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private AuthenticationManager authenticationManager;
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
-    private TokenProvider tokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenProvider tokenProvider;
 
-    @Autowired
-    public void setAuthenticationManager(final AuthenticationManager authenticationManager) {
+    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, PasswordEncoder passwordEncoder, TokenProvider tokenProvider) {
         this.authenticationManager = authenticationManager;
-    }
-
-    @Autowired
-    public void setUserRepository(final UserRepository userRepository) {
         this.userRepository = userRepository;
-    }
-
-    @Autowired
-    public void setPasswordEncoder(final PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
-    }
-
-    @Autowired
-    public void setTokenProvider(final TokenProvider tokenProvider) {
         this.tokenProvider = tokenProvider;
     }
 
