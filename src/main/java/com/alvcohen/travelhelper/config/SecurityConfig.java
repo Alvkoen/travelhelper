@@ -1,20 +1,27 @@
 package com.alvcohen.travelhelper.config;
 
 import com.alvcohen.travelhelper.config.security.CustomUserDetailsService;
-import com.alvcohen.travelhelper.config.security.TokenAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+
+import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebSecurity
@@ -30,11 +37,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     public void setCustomUserDetailsService(final CustomUserDetailsService customUserDetailsService) {
         this.customUserDetailsService = customUserDetailsService;
-    }
-
-    @Bean
-    public TokenAuthenticationFilter tokenAuthenticationFilter() {
-        return new TokenAuthenticationFilter();
     }
 
     @Override
@@ -53,6 +55,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public AuthenticationManager authenticationManagerBean() throws Exception {
         return super.authenticationManagerBean();
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder(AppProperties appProperties) {
+        return NimbusJwtDecoder
+                .withSecretKey(new SecretKeySpec(appProperties.getAuth().getTokenSecret().getBytes(), "HmacSHA512"))
+                .macAlgorithm(MacAlgorithm.HS512)
+                .build();
     }
 
     @Override
@@ -82,8 +92,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .anyRequest()
             .authenticated()
             .and()
-            .oauth2Login();
+            .oauth2Login()
+            .and()
+                .oauth2ResourceServer()
+                .jwt()
+                .jwtAuthenticationConverter(jwt -> {
+                    Long userId = Long.parseLong(jwt.getSubject());
 
-        http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                    UserDetails userDetails = customUserDetailsService.loadUserById(userId);
+                    return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                });
     }
 }
