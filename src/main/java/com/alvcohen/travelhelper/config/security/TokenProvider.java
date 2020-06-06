@@ -1,14 +1,12 @@
 package com.alvcohen.travelhelper.config.security;
 
 import com.alvcohen.travelhelper.config.AppProperties;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.UnsupportedJwtException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +14,6 @@ import java.util.Date;
 
 @Service
 public class TokenProvider {
-
-    private static final Logger logger = LoggerFactory.getLogger(TokenProvider.class);
 
     private final AppProperties appProperties;
 
@@ -31,37 +27,20 @@ public class TokenProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + appProperties.getAuth().getTokenExpirationMs());
 
-        return Jwts.builder()
-            .setSubject(Long.toString(userPrincipal.getId()))
-            .setIssuedAt(new Date())
-            .setExpiration(expiryDate)
-            .signWith(SignatureAlgorithm.HS512, appProperties.getAuth().getTokenSecret())
-            .compact();
-    }
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .subject(userPrincipal.getId().toString())
+                .issueTime(now)
+                .expirationTime(expiryDate)
+                .build();
 
-    public Long getUserIdFromToken(String token) {
-        Claims claims = Jwts.parser()
-            .setSigningKey(appProperties.getAuth().getTokenSecret())
-            .parseClaimsJws(token)
-            .getBody();
+        SignedJWT jwsObject = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), claimsSet);
 
-        return Long.parseLong(claims.getSubject());
-    }
-
-    public boolean validateToken(String authToken) {
         try {
-            Jwts.parser().setSigningKey(appProperties.getAuth().getTokenSecret()).parseClaimsJws(authToken);
-            return true;
-        } catch (MalformedJwtException ex) {
-            logger.error("Invalid JWT token");
-        } catch (ExpiredJwtException ex) {
-            logger.error("Expired JWT token");
-        } catch (UnsupportedJwtException ex) {
-            logger.error("Unsupported JWT token");
-        } catch (IllegalArgumentException ex) {
-            logger.error("JWT claims string is empty.");
+            jwsObject.sign(new MACSigner(appProperties.getAuth().getTokenSecret().getBytes()));
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
         }
-        return false;
-    }
 
+        return jwsObject.serialize();
+    }
 }
