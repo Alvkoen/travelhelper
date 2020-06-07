@@ -1,0 +1,50 @@
+<html>
+<head>
+    <style>
+        #login-form { display: none; }
+        #welcome { display: none; }
+    </style>
+    <script>
+        fetch("/user/me")
+            .then(r => r.json())
+            .then(user => {
+                document.querySelector("#user-name").innerHTML = user.name;
+                document.querySelector("#welcome").setAttribute("style", "display: block");
+            })
+            .catch(reason => {
+                document.querySelector("#login-form").setAttribute("style", "display: block");
+            });
+
+        function signup() {
+            const name = document.querySelector("#name").value;
+            const email = document.querySelector("#email").value;
+            const password = document.querySelector("#password").value;
+
+            fetch("/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }), headers: { "Content-Type": "application/json" } })
+                .then(r => {
+                    if (r.status === 201) {
+                        window.location.href = "/login";
+                    } else {
+                        alert("Failed: " + r.statusText)
+                    }
+
+                })
+                .catch(e => alert("Failed: " + e));
+        }
+    </script>
+</head>
+
+<body>
+<div id="welcome">
+    Hello <span id="user-name"></span>
+</div>
+<div id="login-form">
+    <a href="/login">Login to start using the system</a>
+    Or signup
+    <input name="name" value="name" id="name">
+    <input name="email" value="test@example.com" type="email" id="email">
+    <input name="password" type="password" value="password" id="password">
+    <button type="submit" onclick="signup()">Signup</button>
+</div>
+</body>
+</html>
