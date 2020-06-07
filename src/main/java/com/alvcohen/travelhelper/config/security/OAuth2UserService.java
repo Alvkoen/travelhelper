@@ -48,26 +48,26 @@ public class OAuth2UserService extends OidcUserService {
                     user.getProvider() + " account. Please use your " + user.getProvider() +
                     " account to login.");
             }
-            user = updateExistingUser(user, oAuth2User);
+            updateExistingUser(user, oAuth2User);
         } else {
-            user = registerNewUser(oAuth2UserRequest, oAuth2User);
+            registerNewUser(oAuth2UserRequest, oAuth2User);
         }
 
-        return UserPrincipal.create(user, oAuth2User);
+        return oAuth2User;
     }
 
-    private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OidcUser oAuth2UserInfo) {
+    private void registerNewUser(OAuth2UserRequest oAuth2UserRequest, OidcUser oAuth2UserInfo) {
         User user = new User();
         user.setProvider(AuthProvider.GOOGLE);
         user.setProviderId(oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase());
         user.setName(oAuth2UserInfo.getName());
         user.setEmail(oAuth2UserInfo.getEmail());
-        return userRepository.save(user);
+        userRepository.save(user);
     }
 
-    private User updateExistingUser(User existingUser, OidcUser oAuth2UserInfo) {
+    private void updateExistingUser(User existingUser, OidcUser oAuth2UserInfo) {
         existingUser.setName(oAuth2UserInfo.getName());
-        return userRepository.save(existingUser);
+        userRepository.save(existingUser);
     }
 
 }

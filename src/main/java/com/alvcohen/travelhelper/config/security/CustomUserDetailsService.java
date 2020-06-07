@@ -1,6 +1,5 @@
 package com.alvcohen.travelhelper.config.security;
 
-import com.alvcohen.travelhelper.exception.ResourceNotFoundException;
 import com.alvcohen.travelhelper.model.User;
 import com.alvcohen.travelhelper.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,15 +29,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                 new UsernameNotFoundException(String.format("User with email %s not found", email))
             );
 
-        return UserPrincipal.create(user);
-    }
-
-    @Transactional
-    public UserDetails loadUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(
-            () -> new ResourceNotFoundException("User", "id", id)
-        );
-
-        return UserPrincipal.create(user);
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities("ROLE_USER")
+                .build();
     }
 }

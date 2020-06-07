@@ -2,9 +2,9 @@ spring:
   datasource:
     # initialize: true
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/travel_helper
-    username: travel_user
-    password: somesecurepassword
+    url: ${db.url}
+    username: ${db.username}
+    password: ${db.password}
 
     hikari:
       connection-timeout: 60000
@@ -26,8 +26,7 @@ spring:
             scope: openid,email,profile
         provider:
           google:
-            user-name-attribute: name
-app:
-  auth:
-    tokenSecret: A364AE3D35494DA89EA5CA761B7A4A176D769E1010FA41EC9800EBFAC2DBAFE4
-    tokenExpirationMs: 864000000
+            user-name-attribute: email
+      resourceserver:
+        jwt:
+          issuer-uri: https://accounts.google.com
